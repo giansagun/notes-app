@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard</title>
+</head>
+<body>
+  <h2>Welcome to Your Notes</h2>
+
+  <form id="noteForm">
+    <input type="text" id="noteInput" placeholder="Write your note..." required />
+    <button type="submit">Add Note</button>
+  </form>
+
+  <ul id="notesList"></ul>
+
+  <button onclick="logout()">Logout</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = 'login.html';
+    }
+
+    const noteForm = document.getElementById('noteForm');
+    const notesList = document.getElementById('notesList');
+
+    async function fetchNotes() {
+      const res = await fetch('http://localhost:5000/api/notes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const notes = await res.json();
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const li = document.createElement('li');
+        li.textContent = note.text;
+        const del = document.createElement('button');
+        del.textContent = '❌';
+        del.onclick = () => deleteNote(note._id);
+        li.appendChild(del);
+        notesList.appendChild(li);
+      });
+    }
+
+    async function deleteNote(id) {
+      await fetch(`http://localhost:5000/api/notes/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchNotes();
+    }
+
+    noteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('noteInput').value;
+      await fetch('http://localhost:5000/api/notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text })
+      });
+      document.getElementById('noteInput').value = '';
+      fetchNotes();
+    });
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    }
+
+    fetchNotes();
+  </script>
+</body>
+</html>

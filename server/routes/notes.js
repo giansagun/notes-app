@@ -1,40 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const Note = require('../models/Note');
+const verifyToken = require('../middleware/auth');
 
-// GET all notes
-router.get('/', async (req, res) => {
-  try {
-    const notes = await Note.find();
-    res.json(notes);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+// Get all notes for logged-in user
+router.get('/', verifyToken, async (req, res) => {
+  const notes = await Note.find({ user: req.userId });
+  res.json(notes);
 });
 
-// POST a new note
-router.post('/', async (req, res) => {
+// Create a new note
+router.post('/', verifyToken, async (req, res) => {
   const note = new Note({
-    title: req.body.title,
-    content: req.body.content
+    user: req.userId,
+    text: req.body.text
   });
-
-  try {
-    const newNote = await note.save();
-    res.status(201).json(newNote);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+  await note.save();
+  res.json(note);
 });
 
-// DELETE a note
-router.delete('/:id', async (req, res) => {
-  try {
-    await Note.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Note deleted' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+// Delete a note
+router.delete('/:id', verifyToken, async (req, res) => {
+  await Note.findOneAndDelete({ _id: req.params.id, user: req.userId });
+  res.json({ message: 'Note deleted' });
 });
 
 module.exports = router;
