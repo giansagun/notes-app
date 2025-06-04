@@ -1,20 +1,23 @@
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-function verifyToken(req, res, next) {
-  const token = req.headers['authorization'];
-
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
 
   try {
-    const actualToken = token.startsWith('Bearer ') ? token.slice(7) : token;
-    const decoded = jwt.verify(actualToken, process.env.JWT_SECRET);
-    req.userId = decoded.userId;
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-}
+    const user = await User.findOne({ username });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-module.exports = verifyToken;
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    res.json({ token });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;
